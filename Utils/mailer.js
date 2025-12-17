@@ -1,37 +1,45 @@
-import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
 const user = process.env.BREVO_MAIL;
-const pass = process.env.BREVO_KEY;
+const apiKey = process.env.BREVO_KEY;
 
-if (!user || !pass) {
-    throw new Error('Missing Brevo SMTP credentials');
+if (!user || !apiKey) {
+    throw new Error('Missing Brevo API credentials');
 }
 
-const transporter = nodemailer.createTransport({
-    host: 'smtp-relay.brevo.com',
-    port: 587,
-    secure: false,
-    auth: {
-        user,
-        pass,
-    },
-});
-
-const sendEmail = async (to, subject, text) => {
-    const mailOptions = {
-        from: user,
-        to,
+const sendEmail = async (to, subject, text, html) => {
+    if (!to || !subject || (!text && !html)) {
+        throw new Error('Missing email fields');
+    }
+    const payload = {
+        sender: { email: user },
+        to: [{ email: to }],
         subject,
-        text,
+        textContent: text || undefined,
+        htmlContent: html || undefined,
     };
     try {
-        await transporter.sendMail(mailOptions);
-        console.log('Email sent successfully');
-    } catch (error) {
-        console.error('Error sending email:', error);
+        const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+            method: 'POST',
+            headers: {
+                accept: 'application/json',
+                'content-type': 'application/json',
+                'api-key': apiKey,
+            },
+            body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+            const body = await res.text();
+            throw new Error(`Brevo API failed ${res.status}: ${body}`);
+        }
+        const data = await res.json();
+        console.log('Email sent', data.messageId || data);
+        return data;
+    } catch (err) {
+        console.error('Error sending email', err);
+        throw err;
     }
 };
 
