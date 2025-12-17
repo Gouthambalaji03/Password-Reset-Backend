@@ -79,11 +79,12 @@ export const forgotPassword = async (req, res) => {
       expiresIn: "1h",
     });
     // send email
+    const resetUrl = `https://password-reset-frontend-xi.vercel.app/reset-password/${user._id}/${token}`;
     await sendEmail(
       user.email,
       "Password Reset",
-      `Click the link to reset your password: https://password-reset-frontend-xi.vercel.app/reset-password/${user._id}/${token} 
-      if you did not request this, please ignore this email.`
+      `Click the link to reset your password: ${resetUrl}. If you did not request this, please ignore this email.`,
+      `<p>Click the link to reset your password:</p><p><a href="${resetUrl}">${resetUrl}</a></p><p>If you did not request this, please ignore this email.</p>`
     );
     res.status(200).json({ message: "Password reset email sent" });
   } catch (error) {
